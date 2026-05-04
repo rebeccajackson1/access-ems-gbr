@@ -53,7 +53,7 @@ def main(args):
     # Set sea salt emissions dates:
     if (inj_start_dt is not None) and (inj_end_dt is not None):
         if timing == 'constant':
-            print('ancil_start/end not provided. Assuming constant emissions.')
+            print('ancil_start/end_dt not provided. Assuming constant emissions.')
         else:
             inj_start_dt = dt.datetime(int(inj_start_dt[0:4]), int(inj_start_dt[5:7]), int(inj_start_dt[8:10]))
             inj_end_dt = dt.datetime(int(inj_end_dt[0:4]), int(inj_end_dt[5:7]), int(inj_end_dt[8:10]))
@@ -62,7 +62,7 @@ def main(args):
     if (inj_start_hr is not None) and (inj_end_hr is not None) and (timing == 'constant'):
         print('ancil_start/end not provided. Assuming constant emissions.')
         
-    print(f'Creating SS emissions file:')
+    print(f'\nCreating SS emissions file:')
     print(f'    Mass flux:  {massflux} kg/gridbox/s')
     print(f'    Timing:     {timing}')
     if timing != 'constant':
@@ -168,7 +168,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog='create_ssflux', description="Create sea salt emission file for RRAP MCB scenarios.")
 
     parser.add_argument("massflux", type=float, help="Total sea salt mass flux per gridbox.")
-    parser.add_argument("coord_file", type=str, help="CSV file with a list of injection coords (if -pt_source flag is used), or shapefile for emissionarea.")
+    parser.add_argument("coord_file", type=str, help="CSV file with a list of injection coords (if -pt_source flag is used), or shapefile for emission area.")
     parser.add_argument("template_fname", type=str, help="Emission ancillary file to use as template.")
     parser.add_argument("out_fname", type=str, help="Out file name.")
     parser.add_argument("--pt_source", action='store_true', help="Use this flag for point source emissions. Default assumes an even surface flux.")

@@ -1,4 +1,10 @@
 #!/bin/bash
+#PBS -l walltime=00:10:00,mem=10gb,ncpus=104
+#PBS -P p66
+#PBS -q normalsr
+#PBS -j oe
+#PBS -l other=gdata1
+#PBS -lstorage=gdata/p66+gdata/access+gdata/xp65
 
 : '
 *********************************************************************************
@@ -12,37 +18,65 @@ Test mass fluxes (kg/gridbox/s)
     Low  : 0.03182563e-2 (0.32 g/s)
     Med  : 0.03182563e-1 (3.18 g/s)
     High : 0.03182563 (31.83 g/s)
+
+Inputs:
+    create_ss_flux.py massflux (kg/gridbox/s) coord_file (list of coords or .shp) template_fname, out_fname 
+
+Optional args:
+    --ancil_start_dt  (start date for ancil file)
+    --ancil_end_dt    (end date for ancil file)
+    --inj_start_dt    (start date for emissions)
+    --inj_end_dt      (end date for emissions)
+    --inj_start_hr    (start hour for emissions)
+    --inj_end_hr      (end hour for emissions)
 '
 
+module load python3
 module use /g/data/xp65/public/modules
-module load conda/analysis3-25.07
-cd /g/data/p66/rj9627/UM_NS/create_SSflux
+module load conda/analysis3-25.08
 
-massflux=0.03182563
+cd UM_NS/create_SSflux
 
-# Periodic point-source emissions
-# -------------------------------
-coord_file=/g/data/p66/rj9627/UM_NS/create_SSflux/inputs/Sprayers_Cairns_50km_spacing_coords.csv # Point source emissions
-out_fname=gbr_ssflux_50kmSpacing_HighFlux_cairns50_tseries.nc
-start_dt=2021-12-30
-end_dt=2022-05-02
-inj_start_dt=2022-01-01
-inj_end_dt=2022-04-30
-inj_start_hr=20 # UTC (6 am UTC+10)
-inj_end_hr=8    # UTC (6 pm UTC+10)
-#template_fname=/g/data/access/projects/access/data/ukca/RNS/ancils/out/OC_biomass_high_2014_time_slice.nc # Global
-#out_fpath=out/N216/${out_fname}
-template_fname=/g/data/p66/rj9627/UM_NS/ancils/NE_Aus/4km/ukca/out/OC_biomass_high_2014_time_slice.nc      # NE Aus
-#out_fpath=out/NE_Aus_4km/${out_fname}
-out_fpath=test/NE_Aus_4km/${out_fname}
-python3 create_ssflux.py ${massflux} ${coord_file} ${template_fname} ${out_fpath} --pt_source --ancil_start_dt ${start_dt} --ancil_end_dt ${end_dt} --inj_start_dt ${inj_start_dt} --inj_end_dt ${inj_end_dt} --inj_start_hr ${inj_start_hr} --inj_end_hr ${inj_end_hr}
+### Inputs
+massflux=0.03182563e-1
+l_pt_src=true
+l_periodic=true
+coord_file=inputs/Sprayers_Cairns_20km_spacing_coords.csv            # Point sources
+#coord_file=inputs/gbr50_region.shp                                  # Even surface flux
+out_fpath=out_new
+out_fname=gbr_ssflux_20kmSpacing_MedFlux_cairns
+template_global=ancils/out/OC_biomass_high_2014_time_slice.nc               # Global
+template_rgn=ancils/NE_Aus/4km/ukca/out/OC_biomass_high_2014_time_slice.nc  # NE Aus
 
-# Constant emissions assuming an even surface flux
-# ------------------------------------------------
-#coord_file=/g/data/p66/rj9627/UM_NS/create_SSflux/inputs/gbr50_region.shp
-#out_fname=gbr_ssflux_20kmSpacing_HighFlux_gbr50_constant.nc
-#template_fname=/g/data/access/projects/access/data/ukca/RNS/ancils/out/OC_biomass_high_2014_time_slice.nc # Global
-#out_fpath=out/N216/${out_fname}
-#template_fname=/g/data/p66/rj9627/UM_NS/ancils/NE_Aus/4km/ukca/out/OC_biomass_high_2014_time_slice.nc     # NE Aus
-#out_fpath=out/NE_Aus_4km/${out_fname}
-#python3 create_ssflux.py ${massflux}  ${coord_file} ${template_fname} ${out_fpath}
+### Point source emissions
+if $l_pt_src; then       
+    if $l_periodic; then
+        start_dt=2021-12-30
+        end_dt=2022-05-02
+        inj_start_dt=2021-12-31
+        inj_end_dt=2022-04-30
+        inj_start_hr=20 # UTC (6 am UTC+10)
+        inj_end_hr=8    # UTC (6 pm UTC+10)
+        python3 create_ssflux.py ${massflux} ${coord_file} ${template_global} ${out_fpath}/N216/${out_fname}_tseries.nc --pt_source --ancil_start_dt ${start_dt} --ancil_end_dt ${end_dt} --inj_start_dt ${inj_start_dt} --inj_end_dt ${inj_end_dt} --inj_start_hr ${inj_start_hr} --inj_end_hr ${inj_end_hr}
+        python3 create_ssflux.py ${massflux} ${coord_file} ${template_rgn} ${out_fpath}/NE_Aus_4km/${out_fname}_tseries.nc --pt_source --ancil_start_dt ${start_dt} --ancil_end_dt ${end_dt} --inj_start_dt ${inj_start_dt} --inj_end_dt ${inj_end_dt} --inj_start_hr ${inj_start_hr} --inj_end_hr ${inj_end_hr}
+    else
+        python3 create_ssflux.py ${massflux} ${coord_file} ${template_global} ${out_fpath}/N216/${out_fname}.nc --pt_source 
+        python3 create_ssflux.py ${massflux} ${coord_file} ${template_rgn} ${out_fpath}/NE_Aus_4km/${out_fname}.nc --pt_source 
+    fi
+
+### Even surface flux over .shp region
+else 
+    if $l_periodic; then
+        start_dt=2021-12-30
+        end_dt=2022-05-02
+        inj_start_dt=2022-01-01
+        inj_end_dt=2022-04-30
+        inj_start_hr=20 # UTC (6 am UTC+10)
+        inj_end_hr=8    # UTC (6 pm UTC+10)
+        python3 create_ssflux.py ${massflux} ${coord_file} ${template_global} ${out_fpath}/n216/${out_fname}_tseries.nc --ancil_start_dt ${start_dt} --ancil_end_dt ${end_dt} --inj_start_dt ${inj_start_dt} --inj_end_dt ${inj_end_dt} --inj_start_hr ${inj_start_hr} --inj_end_hr ${inj_end_hr}
+        python3 create_ssflux.py ${massflux} ${coord_file} ${template_rgn} ${out_fpath}/NE_Aus_4km/${out_fname}_tseries.nc --ancil_start_dt ${start_dt} --ancil_end_dt ${end_dt} --inj_start_dt ${inj_start_dt} --inj_end_dt ${inj_end_dt} --inj_start_hr ${inj_start_hr} --inj_end_hr ${inj_end_hr}
+    else
+        python3 create_ssflux.py ${massflux} ${coord_file} ${template_global} ${out_fpath}/n216/${out_fname}.nc
+        python3 create_ssflux.py ${massflux} ${coord_file} ${template_rgn} ${out_fpath}/NE_Aus_4km/${out_fname}.nc 
+    fi
+fi
